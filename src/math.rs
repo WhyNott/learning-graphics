@@ -1,0 +1,19 @@
+pub use vecmath::{
+    vec3_cast,
+    vec3_sub,
+    vec3_add,
+    vec3_mul,
+    vec3_dot,
+    vec3_square_len,	
+    vec3_cross,	
+    vec3_scale,	
+    vec3_neg,	
+    vec3_len,	
+    vec3_inv_len,	
+    vec3_normalized,	
+    vec3_normalized_sub
+};
+
+use vecmath;
+
+pub type Vector3 = vecmath::Vector3<f64>;

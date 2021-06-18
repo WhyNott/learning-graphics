@@ -1,0 +1,13 @@
+[package]
+name = "learning-graphics"
+version = "0.1.0"
+authors = ["Jan Wanot <Jan.Wanot.2017@live.rhul.ac.uk>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+minifb = "0.19.3"
+
+[dependencies.vecmath]
+version = "1.0.0"
