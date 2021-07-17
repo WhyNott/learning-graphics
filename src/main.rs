@@ -41,21 +41,20 @@ fn interpolate(i0:isize, d0:isize, i1:isize, d1:isize) -> Vec<f64> {
     return values;
 }
 
+use std::mem;
+
 fn draw_line(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize),  color: Color){
-    let (x0, x1, y0, y1) : (isize, isize, isize, isize);
+    let mut p0 = p0;
+    let mut p1 = p1;
+    
+  
     
     if (p1.0-p0.0).abs() > (p1.1-p0.1).abs() {
         if p0.0 > p1.0 {
-            x0 = p1.0;
-            y0 = p1.1;
-            x1 = p0.0;
-            y1 = p0.1;
-        } else {
-            x0 = p0.0;
-            y0 = p0.1;
-            x1 = p1.0;
-            y1 = p1.1;
+            mem::swap(&mut p0, &mut p1);
         }
+        let (x0, y0) = p0;
+        let (x1, y1) = p1;
 
         let ys = interpolate(x0, y0, x1, y1);
         for x in x0..x1{
@@ -63,16 +62,10 @@ fn draw_line(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize),  c
         }
     } else {
         if p0.1 > p1.1 {
-            x0 = p1.0;
-            y0 = p1.1;
-            x1 = p0.0;
-            y1 = p0.1;
-        } else {
-            x0 = p0.0;
-            y0 = p0.1;
-            x1 = p1.0;
-            y1 = p1.1;
+           mem::swap(&mut p0, &mut p1);
         }
+        let (x0, y0) = p0;
+        let (x1, y1) = p1;
 
         let xs = interpolate(y0, x0, y1, x1);
         for y in y0..y1{
@@ -82,13 +75,60 @@ fn draw_line(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize),  c
     }
 }
 
+fn draw_wireframe_triangle(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize), p2: (isize, isize), color: Color){
+    draw_line(buffer, p0, p1, color);
+    draw_line(buffer, p1, p2, color);
+    draw_line(buffer, p2, p0, color);
+}
+
+fn draw_filled_triangle(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize), p2: (isize, isize), color: Color){
+    let mut p0 = p0;
+    let mut p1 = p1;
+    let mut p2 = p2;
+    
+    if p1.1 < p0.1 {mem::swap(&mut p1, &mut p0);}
+    if p2.1 < p0.1 {mem::swap(&mut p2, &mut p0);}
+    if p2.1 < p1.1 {mem::swap(&mut p2, &mut p1);}
+    
+    let (x0, y0) = p0;
+    let (x1, y1) = p1;
+    let (x2, y2) = p2;
+
+    let mut x01 = interpolate(y0, x0, y1, x1);
+    let mut x12 = interpolate(y1, x1, y2, x2);
+    let mut x02 = interpolate(y0, x0, y2, x2);
+
+    // Concatenate the short sides
+   // x01.pop();
+    x01.append(&mut x12);
+    let x012 = x01;
+
+    let m = x012.len() / 2;
+    let (x_left, x_right);
+
+    if x02[m] < x012[m] {
+        x_left = x02;
+        x_right = x012;
+    } else {
+        x_left = x012;
+        x_right = x02;
+    }
+
+    for y in y0..y2 {
+        for x in (x_left[(y - y0) as usize] as isize)..(x_right[(y - y0) as usize] as isize) {
+            putpixel(buffer, x, y, color);
+        }
+    }
+    
+}
+
 fn main() {
     
     let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
   
-    draw_line(&mut buffer, (-200, -100), (240, 120), from_u8_rgb(0, 0, 0));
     
-    draw_line(&mut buffer, (-50, -200), (60, 240), from_u8_rgb(0, 0, 0));
+    draw_filled_triangle(&mut buffer, (-200,-250), (200,50), (20,250), from_u8_rgb(0, 255, 0));
+    draw_wireframe_triangle(&mut buffer, (-200,-250), (200,50), (20,250), from_u8_rgb(0, 0, 0));
     
     let mut window = Window::new(
         "Test - ESC to exit",
