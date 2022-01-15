@@ -1,0 +1,23 @@
+* How "far along" is this?
+About as much as I want!
+
+* How much work do I need to display a triangle on the screen?
+None at all, its already done.
+
+* What are homogenous coordinates for?
+
+Normally when you use a 2x2 matrix it lacks the constants, so if you use a 3x3 matrix and then just use 1 as the third value in the vector it works. 
+
+* How do I represent a polygon?
+
+The naiive idea is to simply create a struct with x/y/z fields.
+
+* When drawing the polygon, can I discard the third value or do I need to divide the other two by it?
+
+For now lets discard, if it looks funny we will divide. 
+
+So far so good... Though all of them are just 1 for now, so it means nothing really. 
+
+* How do I /rotate/ a triangle. 
+
+It involved like, a sinus, didn't it. 

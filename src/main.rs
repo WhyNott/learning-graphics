@@ -1,134 +1,116 @@
 extern crate minifb;
 extern crate vecmath;
 mod math;
+mod gfx;
+
 
 use minifb::{Key, Window, WindowOptions};
+use math::{Vector3, Vector4, Matrix4, Matrix3, col_mat3_transform};
+use gfx::colors::{Color, from_u8_rgb};
+use gfx::primitives::{draw_filled_triangle, draw_wireframe_triangle};
+use gfx::bitmaps::Bitmap;
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 640;
 
-type Color = u32;
 
-use math::{Vector3};
 
-const fn from_u8_rgb(r: u8, g: u8, b: u8) -> Color {
-    let (r, g, b) = (r as u32, g as u32, b as u32);
-    (r << 16) | (g << 8) | b
+
+#[derive(Debug, Clone, Copy)]
+struct Polygon {
+    a: Vector4,
+    b: Vector4,
+    c: Vector4
 }
+
+#[derive(Debug, Clone, Copy)]
+struct ScreenPolygon {
+    a: Vector3,
+    b: Vector3,
+    c: Vector3
+}
+
+impl ScreenPolygon {
+    fn draw(&self, buffer: &mut Bitmap, color: Color) {
+        draw_filled_triangle(buffer,
+                             ((self.a[0]/self.a[2]) as isize,
+                              (self.a[1]/self.a[2]) as isize),
+                             ((self.b[0]/self.b[2]) as isize,
+                              (self.b[1]/self.b[2]) as isize),
+                             ((self.c[0]/self.c[2]) as isize,
+                              (self.c[1]/self.c[2]) as isize),
+                             color);
+        draw_wireframe_triangle(buffer,
+                             ((self.a[0]/self.a[2]) as isize,
+                              (self.a[1]/self.a[2]) as isize),
+                             ((self.b[0]/self.b[2]) as isize,
+                              (self.b[1]/self.b[2]) as isize),
+                             ((self.c[0]/self.c[2]) as isize,
+                              (self.c[1]/self.c[2]) as isize),
+                                from_u8_rgb(0, 0, 0));
+    }
+
+    fn m_multiply(&self, mat: Matrix3) -> ScreenPolygon {
+            ScreenPolygon {
+            a: col_mat3_transform(mat, self.a),
+            b: col_mat3_transform(mat, self.b),
+            c: col_mat3_transform(mat, self.c),
+        }
+    }
+    
+    fn translate(&self, x: f64, y: f64) -> ScreenPolygon {
+        let tmat: Matrix3 = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]];
+        self.m_multiply(tmat)
+    }
+
+    fn scale(&self, s_x: f64, s_y: f64, p_x: f64, p_y: f64) -> ScreenPolygon {
+        let smat: Matrix3 = [
+            [s_x, 0.0, 0.0],
+            [0.0, s_y, 0.0],
+            [p_x*(1.0 - s_x), p_y*(1.0-s_y), 1.0]];
+        self.m_multiply(smat)
+    }
+    //note: angle is given in radians, apparently
+    fn rotate(&self, angle: f64, p_x: f64, p_y: f64) -> ScreenPolygon {
+        let rmat: Matrix3 = [
+            [angle.cos(), angle.sin(), 0.0],
+            [-angle.sin(), angle.cos(), 0.0],
+            [p_x*(1.0 - angle.cos())+p_y*angle.sin(),
+             p_y*(1.0 - angle.cos())-p_x*angle.sin(),
+            1.0]
+        ];
+        self.m_multiply(rmat)
+    }
+    
+    
+}
+
 
 const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
 
 
-fn putpixel(buffer: &mut Vec<Color>, x: isize, y:isize, color: Color){
-    let x = (WIDTH/2) as isize + x;
-    let y = (HEIGHT/2) as isize - y;
-    if let Some(pixel) = buffer.get_mut((y*WIDTH as isize + x) as usize) {
-        *pixel = color;
-    }
-}
-
-fn interpolate(i0:isize, d0:isize, i1:isize, d1:isize) -> Vec<f64> {
-    if i0 == i1 {
-        return vec![d0 as f64];
-    }
-    let mut values = Vec::new();
-    let a = (d1 - d0) as f64 / (i1 - i0) as f64;
-    let mut d = d0 as f64;
-    for _i in i0..i1 {
-        values.push(d);
-        d = d + a;
-    }
-    return values;
-}
-
-use std::mem;
-
-fn draw_line(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize),  color: Color){
-    let mut p0 = p0;
-    let mut p1 = p1;
-    
-  
-    
-    if (p1.0-p0.0).abs() > (p1.1-p0.1).abs() {
-        if p0.0 > p1.0 {
-            mem::swap(&mut p0, &mut p1);
-        }
-        let (x0, y0) = p0;
-        let (x1, y1) = p1;
-
-        let ys = interpolate(x0, y0, x1, y1);
-        for x in x0..x1{
-            putpixel(buffer, x, ys[(x - x0) as usize] as isize, color);
-        }
-    } else {
-        if p0.1 > p1.1 {
-           mem::swap(&mut p0, &mut p1);
-        }
-        let (x0, y0) = p0;
-        let (x1, y1) = p1;
-
-        let xs = interpolate(y0, x0, y1, x1);
-        for y in y0..y1{
-            putpixel(buffer, xs[(y - y0) as usize] as isize, y, color);
-        }
-
-    }
-}
-
-fn draw_wireframe_triangle(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize), p2: (isize, isize), color: Color){
-    draw_line(buffer, p0, p1, color);
-    draw_line(buffer, p1, p2, color);
-    draw_line(buffer, p2, p0, color);
-}
-
-fn draw_filled_triangle(buffer: &mut Vec<Color>, p0: (isize, isize), p1: (isize, isize), p2: (isize, isize), color: Color){
-    let mut p0 = p0;
-    let mut p1 = p1;
-    let mut p2 = p2;
-    
-    if p1.1 < p0.1 {mem::swap(&mut p1, &mut p0);}
-    if p2.1 < p0.1 {mem::swap(&mut p2, &mut p0);}
-    if p2.1 < p1.1 {mem::swap(&mut p2, &mut p1);}
-    
-    let (x0, y0) = p0;
-    let (x1, y1) = p1;
-    let (x2, y2) = p2;
-
-    let mut x01 = interpolate(y0, x0, y1, x1);
-    let mut x12 = interpolate(y1, x1, y2, x2);
-    let mut x02 = interpolate(y0, x0, y2, x2);
-
-    // Concatenate the short sides
-   // x01.pop();
-    x01.append(&mut x12);
-    let x012 = x01;
-
-    let m = x012.len() / 2;
-    let (x_left, x_right);
-
-    if x02[m] < x012[m] {
-        x_left = x02;
-        x_right = x012;
-    } else {
-        x_left = x012;
-        x_right = x02;
-    }
-
-    for y in y0..y2 {
-        for x in (x_left[(y - y0) as usize] as isize)..(x_right[(y - y0) as usize] as isize) {
-            putpixel(buffer, x, y, color);
-        }
-    }
-    
-}
 
 fn main() {
     
-    let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
-  
+   // let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
+
+    let poly1 = ScreenPolygon {
+        a: [-200.0, -250.0, 1.0],
+        b: [200.0, 50.0, 1.0],
+        c: [20.0, 250.0, 1.0],
+    };
+
+    let poly2 = ScreenPolygon {
+        a: [-200.0, -250.0, 1.0],
+        b: [-200.0, 50.0, 1.0],
+        c: [20.0, 250.0, 1.0],
+    };
     
-    draw_filled_triangle(&mut buffer, (-200,-250), (200,50), (20,250), from_u8_rgb(0, 255, 0));
-    draw_wireframe_triangle(&mut buffer, (-200,-250), (200,50), (20,250), from_u8_rgb(0, 0, 0));
+    let mut scene : Vec<(ScreenPolygon, Color)> = vec![
+        (poly1, from_u8_rgb(0, 255, 0)),
+        (poly2, from_u8_rgb(255, 0, 0))
+    ];
+   
     
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -144,13 +126,39 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        //for i in buffer.iter_mut() {
-        //    *i = 0; // write something more funny here!
-        //}
-
+        let mut buffer = Bitmap {
+            data: vec![BACKGROUND_COLOR; WIDTH * HEIGHT],
+            width: WIDTH,
+            height: HEIGHT
+        };
+        
+        
+        for (polygon, _) in &mut scene{
+            if window.is_key_down(Key::Down) {
+                *polygon = polygon.translate(0.0, -1.0);
+            } else if window.is_key_down(Key::Up) {
+                *polygon = polygon.translate(0.0, 1.0);
+            } else if window.is_key_down(Key::NumPadPlus) {
+                *polygon = polygon.scale(1.1, 1.1, 0.5, 0.5);
+            } else if window.is_key_down(Key::NumPadMinus) {
+                *polygon = polygon.scale(0.9, 0.9, 0.5, 0.5);
+            } else if window.is_key_down(Key::Left) {
+                *polygon = polygon.rotate(0.1, 0.5, 0.5);
+            } if window.is_key_down(Key::Right) {
+                *polygon = polygon.rotate(-0.1, 0.5, 0.5);
+            }
+            
+        }
+        
+        for (polygon, color) in &scene {
+            polygon.draw(&mut buffer, *color);
+        }
+        
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window
-            .update_with_buffer(&buffer, WIDTH, HEIGHT)
+            .update_with_buffer(&(buffer.data), WIDTH, HEIGHT)
             .unwrap();
     }
 }
+
+
