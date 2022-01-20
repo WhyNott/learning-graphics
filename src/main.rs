@@ -4,15 +4,16 @@ mod math;
 mod gfx;
 
 
-use minifb::{Key, Window, WindowOptions};
+use minifb::{Key, Window, WindowOptions, MouseMode};
 use math::{Vector3, Vector4, Matrix4, Matrix3, col_mat3_transform};
 use gfx::colors::{Color, from_u8_rgb};
 use gfx::primitives::{draw_filled_triangle, draw_wireframe_triangle};
 use gfx::bitmaps::Bitmap;
 
+use gfx::load_tga::{load_bitmap_from_tga};
+
 const WIDTH: usize = 640;
 const HEIGHT: usize = 640;
-
 
 
 
@@ -93,7 +94,8 @@ const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
 fn main() {
     
    // let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
-
+    let crosshair = load_bitmap_from_tga("crosshair.tga").unwrap();
+    
     let poly1 = ScreenPolygon {
         a: [-200.0, -250.0, 1.0],
         b: [200.0, 50.0, 1.0],
@@ -153,6 +155,16 @@ fn main() {
         for (polygon, color) in &scene {
             polygon.draw(&mut buffer, *color);
         }
+
+        let (mouse_x, mouse_y) = window.get_mouse_pos(MouseMode::Clamp).unwrap();
+
+        let mouse_x = (mouse_x as isize) - (WIDTH/2) as isize;
+        let mouse_y = (mouse_y as isize) - (HEIGHT/2) as isize;
+        
+
+       // println!("{} {}", mouse_x, mouse_y);
+        //actually, wait. It was not being drawn where it was supposed to be at all!
+        crosshair.draw_on(&mut buffer, mouse_x-32, -mouse_y +32);
         
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window
