@@ -9,7 +9,7 @@ use math::{Vector3, Vector4, Matrix4, Matrix3, col_mat3_transform};
 use gfx::colors::{Color, from_u8_rgb};
 use gfx::primitives::{draw_filled_triangle, draw_wireframe_triangle};
 use gfx::bitmaps::Bitmap;
-
+use gfx::font::{Font};
 use gfx::load_tga::{load_bitmap_from_tga};
 
 const WIDTH: usize = 640;
@@ -93,7 +93,19 @@ const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
 
 fn main() {
     
-   // let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
+    // let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
+    let textmap = load_bitmap_from_tga("bizcat.tga").unwrap();
+    
+    let font = Font {
+        bitmap:  textmap.clone(),
+        char_width: 8,
+        char_height: 16,
+        chars_per_line: 16,
+        num_lines: 16
+    };
+    
+      
+    
     let crosshair = load_bitmap_from_tga("crosshair.tga").unwrap();
     
     let poly1 = ScreenPolygon {
@@ -162,9 +174,13 @@ fn main() {
         let mouse_y = (mouse_y as isize) - (HEIGHT/2) as isize;
         
 
-       // println!("{} {}", mouse_x, mouse_y);
-        //actually, wait. It was not being drawn where it was supposed to be at all!
         crosshair.draw_on(&mut buffer, mouse_x-32, -mouse_y +32);
+
+        //TODO: draw_rectangle_on breaks in this case
+        textmap.draw_rectangle_on(&mut buffer, 0, 0, 0, 0, 8, 256);
+        
+        
+        font.draw_str_line(&mut buffer, 0, 0, "Hello world!");
         
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window

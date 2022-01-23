@@ -1,5 +1,5 @@
 use super::colors::{Color, from_rgba_u8, from_u8_rgba};
-
+#[derive(Clone)]
 pub struct Bitmap {
     pub width: usize,
     pub height: usize,
@@ -8,8 +8,6 @@ pub struct Bitmap {
 
 impl Bitmap {
     pub fn draw_rectangle_on(&self, target: &mut Bitmap, tx: usize, ty: usize, sx: usize, sy: usize,  sw: usize, sh: usize){
-        //(lets assume that y coord increases as you go downward)
-
         
         for i in 0..sh{
             
