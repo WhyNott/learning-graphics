@@ -15,7 +15,7 @@ use gfx::load_tga::{load_bitmap_from_tga};
 const WIDTH: usize = 640;
 const HEIGHT: usize = 640;
 
-
+//okay, considering I have all those different kinds of polygons, I'd like to implement a traid here that makes it so that as long as the underlying datastructure implements an m_muliply method it can derive all the methods for rotation, scaling, etc. 
 
 #[derive(Debug, Clone, Copy)]
 struct Polygon {
@@ -24,14 +24,44 @@ struct Polygon {
     c: Vector4
 }
 
+pub trait Surface2D {
+    fn m_multiply(&self, mat: Matrix3) -> Self;
+
+    fn translate(&self, x: f64, y: f64) -> Self where Self: Sized {
+        let tmat: Matrix3 = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]];
+        self.m_multiply(tmat)
+    }
+
+    fn scale(&self, s_x: f64, s_y: f64, p_x: f64, p_y: f64) -> Self where Self: Sized {
+        let smat: Matrix3 = [
+            [s_x, 0.0, 0.0],
+            [0.0, s_y, 0.0],
+            [p_x*(1.0 - s_x), p_y*(1.0-s_y), 1.0]];
+        self.m_multiply(smat)
+    }
+
+    //note: angle is given in radians, apparently
+    fn rotate(&self, angle: f64, p_x: f64, p_y: f64) -> Self where Self: Sized {
+        let rmat: Matrix3 = [
+            [angle.cos(), angle.sin(), 0.0],
+            [-angle.sin(), angle.cos(), 0.0],
+            [p_x*(1.0 - angle.cos())+p_y*angle.sin(),
+             p_y*(1.0 - angle.cos())-p_x*angle.sin(),
+            1.0]
+        ];
+        self.m_multiply(rmat)
+    }
+    
+}
+
 #[derive(Debug, Clone, Copy)]
-struct ScreenPolygon {
+struct Polygon2D {
     a: Vector3,
     b: Vector3,
     c: Vector3
 }
 
-impl ScreenPolygon {
+impl Polygon2D {
     fn draw(&self, buffer: &mut Bitmap, color: Color) {
         draw_filled_triangle(buffer,
                              ((self.a[0]/self.a[2]) as isize,
@@ -50,41 +80,89 @@ impl ScreenPolygon {
                               (self.c[1]/self.c[2]) as isize),
                                 from_u8_rgb(0, 0, 0));
     }
+          
+}
 
-    fn m_multiply(&self, mat: Matrix3) -> ScreenPolygon {
-            ScreenPolygon {
+impl Surface2D for Polygon2D {
+    fn m_multiply(&self, mat: Matrix3) -> Polygon2D {
+            Polygon2D {
             a: col_mat3_transform(mat, self.a),
             b: col_mat3_transform(mat, self.b),
             c: col_mat3_transform(mat, self.c),
         }
     }
-    
-    fn translate(&self, x: f64, y: f64) -> ScreenPolygon {
-        let tmat: Matrix3 = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [x, y, 1.0]];
-        self.m_multiply(tmat)
-    }
-
-    fn scale(&self, s_x: f64, s_y: f64, p_x: f64, p_y: f64) -> ScreenPolygon {
-        let smat: Matrix3 = [
-            [s_x, 0.0, 0.0],
-            [0.0, s_y, 0.0],
-            [p_x*(1.0 - s_x), p_y*(1.0-s_y), 1.0]];
-        self.m_multiply(smat)
-    }
-    //note: angle is given in radians, apparently
-    fn rotate(&self, angle: f64, p_x: f64, p_y: f64) -> ScreenPolygon {
-        let rmat: Matrix3 = [
-            [angle.cos(), angle.sin(), 0.0],
-            [-angle.sin(), angle.cos(), 0.0],
-            [p_x*(1.0 - angle.cos())+p_y*angle.sin(),
-             p_y*(1.0 - angle.cos())-p_x*angle.sin(),
-            1.0]
-        ];
-        self.m_multiply(rmat)
-    }
-    
-    
 }
+
+
+struct TexturedPolygon2D<'bitmap>{
+    pub coords: Polygon2D,
+    pub texture: &'bitmap Bitmap,
+    pub uv_map: Polygon2D
+}
+impl<'bitmap> Surface2D for TexturedPolygon2D<'bitmap> {
+    fn m_multiply(&self, mat: Matrix3) -> TexturedPolygon2D<'bitmap> {
+        TexturedPolygon2D {
+            coords: self.coords.m_multiply(mat),
+            texture: self.texture,
+            uv_map: self.uv_map
+        }
+    }
+}
+
+struct TexturedFlat2D<'bitmap>{
+    pub a: TexturedPolygon2D<'bitmap>,
+    pub b: TexturedPolygon2D<'bitmap>
+}
+
+impl<'bitmap> Surface2D for TexturedFlat2D<'bitmap> {
+    fn m_multiply(&self, mat:Matrix3) -> TexturedFlat2D<'bitmap> {
+        TexturedFlat2D {
+            a: self.a.m_multiply(mat),
+            b: self.b.m_multiply(mat),
+        }
+    }
+}
+
+impl<'bitmap> TexturedFlat2D <'bitmap> {
+    fn new(texture: &'bitmap Bitmap, location: Vector3) -> TexturedFlat2D<'bitmap> {
+        let uv_a = Polygon2D {
+            a: [0.0, 0.0, 1.0],
+            b: [1.0, 0.0, 1.0],
+            c: [0.0, 1.0, 1.0],
+        };
+        let uv_b = Polygon2D {
+            a: [1.0, 0.0, 1.0],
+            b: [1.0, 1.0, 1.0],
+            c: [0.0, 1.0, 1.0],
+        };
+        
+        let coords_a = Polygon2D {
+            a: location,
+            b: [location[0]+(texture.width as f64), location[1], 1.0],
+            c: [location[0], location[1]+(texture.width as f64), 1.0],
+        };
+        let coords_b = Polygon2D {
+            a: [location[0]+(texture.width as f64), location[1], 1.0],
+            b: [location[0]+(texture.width as f64), location[1]+(texture.width as f64), 1.0],
+            c: [location[0], location[1]+(texture.width as f64), 1.0],
+        };
+        
+        TexturedFlat2D {
+            a: TexturedPolygon2D {
+                coords: coords_a,
+                texture,
+                uv_map: uv_a
+            },
+            b: TexturedPolygon2D {
+                coords: coords_b,
+                texture,
+                uv_map: uv_b
+            }
+        }
+    }
+}
+
+
 
 
 const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
@@ -108,19 +186,19 @@ fn main() {
     
     let crosshair = load_bitmap_from_tga("crosshair.tga").unwrap();
     
-    let poly1 = ScreenPolygon {
+    let poly1 = Polygon2D {
         a: [-200.0, -250.0, 1.0],
         b: [200.0, 50.0, 1.0],
         c: [20.0, 250.0, 1.0],
     };
 
-    let poly2 = ScreenPolygon {
+    let poly2 = Polygon2D {
         a: [-200.0, -250.0, 1.0],
         b: [-200.0, 50.0, 1.0],
         c: [20.0, 250.0, 1.0],
     };
     
-    let mut scene : Vec<(ScreenPolygon, Color)> = vec![
+    let mut scene : Vec<(Polygon2D, Color)> = vec![
         (poly1, from_u8_rgb(0, 255, 0)),
         (poly2, from_u8_rgb(255, 0, 0))
     ];
