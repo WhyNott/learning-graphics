@@ -21,3 +21,35 @@ So far so good... Though all of them are just 1 for now, so it means nothing rea
 * How do I /rotate/ a triangle. 
 
 It involved like, a sinus, didn't it. 
+
+* How does drawing a textured polygon actually work?
+
+1. for each horizontal line between the triangle's top and bottom, get the y of this line
+2. compute x_left and x_right for this y
+3. find the x and y of the corresponding points on the uv map for this x_left and x_right
+4. get an interpolation of all the uv coordinates between those two points (like with drawing a line, but in reverse)
+5. draw the pixels between x_left and x_right, sampling the coordinates for the color at every pixel
+
+** How to find a point on the uv map given a corresponding point on the polygon?
+
+We can assume that points a b and c correspond to points a b and c on the uv directly. If you interpolate it to get the values of u and v at every point between highest_point and lowest_point (can this be done easily?) and then between highest_point and middle_point and between middle_point and lowest_point (and then concatenate the u/v values together for those two), then if the numbers somehow add up I could, for each y line of my polygon, find the corresponding x and y coordinates to sample the texture. 
+
+*** How can I make the numbers add up? 
+
+When you interpolate values, the number of returned values will always be the difference between i0 and i1. (This seems to also be able to tell me which I should use as dependent and which as independent variables.)
+
+For the u0 to u2, I want exactly (y2-y0) points, both for u and v.
+
+
+
+* Can I re-write the draw_filled_triangle function in such a way that I can actually undestand what it does (and that it sort of generalizes to the textured drawing)?
+
+x01 = x0_to_x1
+x12 = x1_to_x2
+x02 = x0_to_x2
+
+** How does it know which sides are the short ones?
+
+I guess the side from the highest to the lowest point will always be the longest one?
+
+Ohhh, it means "short" only vertically.

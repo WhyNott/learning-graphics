@@ -7,7 +7,7 @@ mod gfx;
 use minifb::{Key, Window, WindowOptions, MouseMode};
 use math::{Vector3, Vector4, Matrix4, Matrix3, col_mat3_transform};
 use gfx::colors::{Color, from_u8_rgb};
-use gfx::primitives::{draw_filled_triangle, draw_wireframe_triangle};
+use gfx::primitives::{draw_filled_triangle, draw_wireframe_triangle, draw_textured_triangle};
 use gfx::bitmaps::Bitmap;
 use gfx::font::{Font};
 use gfx::load_tga::{load_bitmap_from_tga};
@@ -109,10 +109,41 @@ impl<'bitmap> Surface2D for TexturedPolygon2D<'bitmap> {
     }
 }
 
+impl<'bitmap> TexturedPolygon2D<'bitmap>{
+    fn draw(&self, buffer: &mut Bitmap){
+        draw_textured_triangle(
+            buffer,
+            ((self.coords.a[0]/self.coords.a[2]) as isize,
+             (self.coords.a[1]/self.coords.a[2]) as isize),
+            ((self.coords.b[0]/self.coords.b[2]) as isize,
+             (self.coords.b[1]/self.coords.b[2]) as isize),
+            ((self.coords.c[0]/self.coords.c[2]) as isize,
+             (self.coords.c[1]/self.coords.c[2]) as isize),
+            ((self.uv_map.a[0]/self.uv_map.a[2]),
+             (self.uv_map.a[1]/self.uv_map.a[2])),
+            ((self.uv_map.b[0]/self.uv_map.b[2]),
+             (self.uv_map.b[1]/self.uv_map.b[2])),
+            ((self.uv_map.c[0]/self.uv_map.c[2]),
+             (self.uv_map.c[1]/self.uv_map.c[2])),
+            self.texture);
+    }
+    
+}
+
+
+
+
 struct TexturedFlat2D<'bitmap>{
     pub a: TexturedPolygon2D<'bitmap>,
     pub b: TexturedPolygon2D<'bitmap>
 }
+impl<'bitmap> TexturedFlat2D<'bitmap>{
+    fn draw(&self, buffer: &mut Bitmap){
+        self.a.draw(buffer);
+        self.b.draw(buffer);       
+    }
+}
+
 
 impl<'bitmap> Surface2D for TexturedFlat2D<'bitmap> {
     fn m_multiply(&self, mat:Matrix3) -> TexturedFlat2D<'bitmap> {
@@ -182,7 +213,11 @@ fn main() {
         num_lines: 16
     };
     
-      
+    let texture = load_bitmap_from_tga("glass.tga").unwrap();
+    let mut glass_flat = TexturedFlat2D::new(&texture, [
+        (WIDTH/2) as f64, (HEIGHT/2) as f64*-1.0, 1.0]);
+
+    
     
     let crosshair = load_bitmap_from_tga("crosshair.tga").unwrap();
     
@@ -258,7 +293,15 @@ fn main() {
 
         
         font.draw_str_line(&mut buffer, -320+4, 320, "All systems active. Zażółć gęślą jaźń.");
+
+        if window.is_key_down(Key::Left) {
+            glass_flat = glass_flat.rotate(0.1, 0.5, 0.5);
+        } else  if window.is_key_down(Key::Right) {
+            glass_flat = glass_flat.rotate(-0.1, 0.5, 0.5);
+        }
         
+        glass_flat.draw(&mut buffer);
+
 
         
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
