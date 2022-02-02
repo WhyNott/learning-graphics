@@ -171,7 +171,7 @@ const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
 
 fn main() {
     
-    // let mut buffer: Vec<Color> = vec![ BACKGROUND_COLOR; WIDTH * HEIGHT];
+    
     let textmap = load_bitmap_from_tga("bizcat.tga").unwrap();
     
     let font = Font {
@@ -214,6 +214,8 @@ fn main() {
         panic!("{}", e);
     });
 
+    window.set_cursor_visibility(false);
+
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
@@ -252,13 +254,12 @@ fn main() {
         let mouse_y = (mouse_y as isize) - (HEIGHT/2) as isize;
         
 
-        crosshair.draw_on(&mut buffer, mouse_x-32, -mouse_y +32);
+        crosshair.draw_on(&mut buffer, mouse_x, -mouse_y);
 
-        //TODO: draw_rectangle_on breaks in this case
-        textmap.draw_rectangle_on(&mut buffer, 0, 0, 0, 0, 8, 256);
         
+        font.draw_str_line(&mut buffer, -320+4, 320, "All systems active. Zażółć gęślą jaźń.");
         
-        font.draw_str_line(&mut buffer, 0, 0, "Hello world!");
+
         
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window

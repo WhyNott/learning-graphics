@@ -24,7 +24,7 @@ impl Bitmap {
             if start < end {
                 let line = &mut target.data[start..end];
                 for (j, pixel) in line.iter_mut().enumerate(){
-                    let source_color = self.data[(i+sy)*sw+j+sx];
+                    let source_color = self.data[(i+sy)*self.width+j+sx];
                     if ((source_color >> 24)&255) == 255 {
                         *pixel = source_color;
                     } else if ((source_color >> 24)&255) != 0 {
