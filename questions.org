@@ -77,3 +77,12 @@ Sort of, yeah. Turns out you really gotta use floating point numbers for this.
 
 * Why does the shaded triangle disappear when its upside-down?
 Same thing happens to the textured triangle as well. 
+
+* What causes the stuttering on my computer?
+
+** Is it input?
+Huh, actually it probably is! Every once in a while, it just messes up. 
+
+
+** How can I fix the stuttering problem with the input?
+
