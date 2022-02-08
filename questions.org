@@ -53,3 +53,27 @@ x02 = x0_to_x2
 I guess the side from the highest to the lowest point will always be the longest one?
 
 Ohhh, it means "short" only vertically.
+
+* Can I prevent it from overdrawing to the left side since its actually kinda annoying?
+
+Not only is it annoying, it used to give me very counter-intuitive results.
+
+
+Hmm, it still seems to pop out for some reason. Oh right, it pops up from the other direction, that makes sense. 
+
+* If I make the UV triangle really big, can I get a repeating pattern for free?
+
+Hm, doesn't quite seem this way. 
+
+* If I rewrite the interpolation to not use allocations, will I get a super-dooper performance boost?
+Only one way to find out. 
+
+Hmm, kinda disappointing that I didn't, but I guess its a bit better to not have vectors here anyway.
+
+* Why does it look all bad?
+
+** Is it because of loosing accuracy? 
+Sort of, yeah. Turns out you really gotta use floating point numbers for this.
+
+* Why does the shaded triangle disappear when its upside-down?
+Same thing happens to the textured triangle as well. 

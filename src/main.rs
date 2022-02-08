@@ -215,7 +215,7 @@ fn main() {
     
     let texture = load_bitmap_from_tga("glass.tga").unwrap();
     let mut glass_flat = TexturedFlat2D::new(&texture, [
-        (WIDTH/2) as f64, (HEIGHT/2) as f64*-1.0, 1.0]);
+        (WIDTH/2) as f64*-1.0, (HEIGHT/2) as f64*-1.0, 1.0]);
 
     
     
