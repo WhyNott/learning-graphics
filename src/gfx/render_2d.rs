@@ -1,7 +1,87 @@
-use crate::math::{Vector3,  Matrix3, col_mat3_transform};
+use crate::math::{Vector3, Vector4,  Matrix3, col_mat3_transform};
 use super::primitives::{draw_filled_triangle, draw_wireframe_triangle, draw_textured_triangle};
 use super::bitmaps::Bitmap;
 use super::colors::{Color, from_u8_rgb};
+use std::iter::zip;
+
+pub struct Viewport {
+    pub canvas_width: usize,
+    pub canvas_height: usize,
+    pub viewport_width: f64,
+    pub viewport_height: f64,
+    pub distance_d: f64,
+    pub background_color: Color,
+    pub depth_buffer: Vec<f64>,
+    pub screen: Bitmap
+}
+
+impl Viewport {
+
+    pub fn new(canvas_width: usize, canvas_height: usize, viewport_width: f64, viewport_height: f64, distance_d: f64, background_color: Color) -> Viewport {
+        Viewport {
+            canvas_width,
+            canvas_height,
+            viewport_width,
+            viewport_height,
+            distance_d,
+            background_color,
+            depth_buffer: vec![0.0; canvas_width*canvas_height], 
+            screen: Bitmap {
+                width: canvas_width,
+                height: canvas_height,
+                data: vec![background_color; canvas_width*canvas_height]
+            }
+        }
+    }
+
+    pub fn clear_screen(&mut self){
+        for (pixel, depth) in zip(&mut self.screen.data, &mut self.depth_buffer){
+            *pixel = self.background_color;
+            *depth = 0.0;
+        }
+    }
+        
+
+    pub fn viewport_to_canvas(&self, x: f64, y:f64) -> (isize, isize){
+        (
+            (x/self.viewport_width * (self.canvas_width as f64)) as isize,
+            (y/self.viewport_height * (self.canvas_height as f64)) as isize,
+        )
+    }
+
+    pub fn project_vertex(&self, v: Vector3) -> (isize, isize){
+        self.viewport_to_canvas(v[0]*self.distance_d/v[2],
+                                v[1]*self.distance_d/v[2])
+    }
+
+    pub fn project_vertex_3d(&self, v: Vector4) -> (isize, isize){
+        self.viewport_to_canvas(
+            v[0]*self.distance_d/(v[2]*v[3]),
+            v[1]*self.distance_d/(v[2]*v[3])
+        )
+    }
+
+    pub fn get_dbuff_val(&self, x: isize, y: isize) -> Option<&f64> {
+        if x < (self.canvas_width/2) as isize && x > (self.canvas_width/2) as isize*-1 {
+            let x = (self.canvas_width/2) as isize + x;
+            let y = (self.canvas_height/2) as isize - y;
+            return self.depth_buffer.get((y*self.canvas_width as isize + x) as usize); 
+        }
+        None
+    }
+
+    pub fn set_dbuff_val(&mut self, x: isize, y: isize, val: f64) {
+        if x < (self.canvas_width/2) as isize && x > (self.canvas_width/2) as isize*-1 {
+            let x = (self.canvas_width/2) as isize + x;
+            let y = (self.canvas_height/2) as isize - y;
+            if let Some(pixel) = self.depth_buffer.get_mut((y*self.canvas_width as isize + x) as usize) {
+                
+                *pixel = val;
+            }
+        }
+    }
+}
+
 
 pub trait Surface2D {
     fn m_multiply(&self, mat: Matrix3) -> Self;
@@ -41,22 +121,17 @@ pub struct Polygon2D {
 }
 
 impl Polygon2D {
-    pub fn draw(&self, buffer: &mut Bitmap, color: Color) {
-        draw_filled_triangle(buffer,
-                             ((self.a[0]/self.a[2]) as isize,
-                              (self.a[1]/self.a[2]) as isize),
-                             ((self.b[0]/self.b[2]) as isize,
-                              (self.b[1]/self.b[2]) as isize),
-                             ((self.c[0]/self.c[2]) as isize,
-                              (self.c[1]/self.c[2]) as isize),
+    pub fn draw(&self, view: &mut Viewport, color: Color) {
+        
+        let (a, b, c) = (view.project_vertex(self.a),
+                         view.project_vertex(self.b),
+                         view.project_vertex(self.c));
+        
+        draw_filled_triangle(&mut view.screen,
+                             a, b, c,
                              color);
-        draw_wireframe_triangle(buffer,
-                             ((self.a[0]/self.a[2]) as isize,
-                              (self.a[1]/self.a[2]) as isize),
-                             ((self.b[0]/self.b[2]) as isize,
-                              (self.b[1]/self.b[2]) as isize),
-                             ((self.c[0]/self.c[2]) as isize,
-                              (self.c[1]/self.c[2]) as isize),
+        draw_wireframe_triangle(&mut view.screen,
+                                a, b, c,
                                 from_u8_rgb(0, 0, 0));
     }
           
@@ -73,13 +148,13 @@ impl Surface2D for Polygon2D {
 }
 
 
-pub struct TexturedPolygon2D<'bitmap>{
+pub struct TexturedPolygon2D<'texture>{
     pub coords: Polygon2D,
-    pub texture: &'bitmap Bitmap,
+    pub texture: &'texture Bitmap,
     pub uv_map: Polygon2D
 }
-impl<'bitmap> Surface2D for TexturedPolygon2D<'bitmap> {
-    fn m_multiply(&self, mat: Matrix3) -> TexturedPolygon2D<'bitmap> {
+impl<'texture> Surface2D for TexturedPolygon2D<'texture> {
+    fn m_multiply(&self, mat: Matrix3) -> TexturedPolygon2D<'texture> {
         TexturedPolygon2D {
             coords: self.coords.m_multiply(mat),
             texture: self.texture,
@@ -88,16 +163,15 @@ impl<'bitmap> Surface2D for TexturedPolygon2D<'bitmap> {
     }
 }
 
-impl<'bitmap> TexturedPolygon2D<'bitmap>{
-    pub fn draw(&self, buffer: &mut Bitmap){
+impl<'texture> TexturedPolygon2D<'texture>{
+    pub fn draw(&self, view: &mut Viewport){
+        let (a, b, c) = (view.project_vertex(self.coords.a),
+                         view.project_vertex(self.coords.b),
+                         view.project_vertex(self.coords.c));
+        
         draw_textured_triangle(
-            buffer,
-            ((self.coords.a[0]/self.coords.a[2]) as isize,
-             (self.coords.a[1]/self.coords.a[2]) as isize),
-            ((self.coords.b[0]/self.coords.b[2]) as isize,
-             (self.coords.b[1]/self.coords.b[2]) as isize),
-            ((self.coords.c[0]/self.coords.c[2]) as isize,
-             (self.coords.c[1]/self.coords.c[2]) as isize),
+            &mut view.screen,
+            a, b, c,
             ((self.uv_map.a[0]/self.uv_map.a[2]),
              (self.uv_map.a[1]/self.uv_map.a[2])),
             ((self.uv_map.b[0]/self.uv_map.b[2]),
@@ -107,25 +181,26 @@ impl<'bitmap> TexturedPolygon2D<'bitmap>{
             self.texture);
     }
     
+    
 }
 
 
 
 
-pub struct TexturedFlat2D<'bitmap>{
-    pub a: TexturedPolygon2D<'bitmap>,
-    pub b: TexturedPolygon2D<'bitmap>
+pub struct TexturedFlat2D<'texture>{
+    pub a: TexturedPolygon2D<'texture>,
+    pub b: TexturedPolygon2D<'texture>
 }
-impl<'bitmap> TexturedFlat2D<'bitmap>{
-    pub fn draw(&self, buffer: &mut Bitmap){
-        self.a.draw(buffer);
-        self.b.draw(buffer);       
+impl<'texture> TexturedFlat2D<'texture>{
+    pub fn draw(&self, view: &mut Viewport){
+        self.a.draw(view);
+        self.b.draw(view);       
     }
 }
 
 
-impl<'bitmap> Surface2D for TexturedFlat2D<'bitmap> {
-     fn m_multiply(&self, mat:Matrix3) -> TexturedFlat2D<'bitmap> {
+impl<'texture> Surface2D for TexturedFlat2D<'texture> {
+     fn m_multiply(&self, mat:Matrix3) -> TexturedFlat2D<'texture> {
         TexturedFlat2D {
             a: self.a.m_multiply(mat),
             b: self.b.m_multiply(mat),
@@ -133,8 +208,8 @@ impl<'bitmap> Surface2D for TexturedFlat2D<'bitmap> {
     }
 }
 
-impl<'bitmap> TexturedFlat2D <'bitmap> {
-    pub fn new(texture: &'bitmap Bitmap, location: Vector3) -> TexturedFlat2D<'bitmap> {
+impl<'texture> TexturedFlat2D <'texture> {
+    pub fn new(texture: &'texture Bitmap, location: Vector3) -> TexturedFlat2D<'texture> {
         let uv_a = Polygon2D {
             a: [0.0, 0.0, 1.0],
             b: [1.0, 0.0, 1.0],

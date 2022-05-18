@@ -23,19 +23,19 @@ pub fn putpixel(buffer: &mut Bitmap, x: isize, y:isize, color: Color){
 //(and compile faster probably)
 #[derive(Debug, Clone, Copy)]
 pub struct Interpolate {
-    a: f32,
-    d: f32,
-    current: isize,
-    end: isize
+    pub a: f32,
+    pub d: f32,
+    pub current: isize,
+    pub end: isize
 }
 
 
 impl Interpolate {
-    fn len(&self) -> isize {
-        self.end - self.current
+    pub fn len(&self) -> isize {
+        (self.end - self.current).abs()
     }
 
-    fn empty() -> Interpolate {
+    pub fn empty() -> Interpolate {
         Interpolate{
             a: 0.0,
             d: 0.0,

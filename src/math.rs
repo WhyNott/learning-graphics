@@ -14,6 +14,7 @@ pub use vecmath::{
     vec3_normalized_sub,
     col_mat3_transform,
 
+    col_mat4_mul,
     vec4_cast,
     vec4_sub,
     vec4_add,

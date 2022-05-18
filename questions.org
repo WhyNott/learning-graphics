@@ -86,3 +86,5 @@ Huh, actually it probably is! Every once in a while, it just messes up.
 
 ** How can I fix the stuttering problem with the input?
 
+* Why are the triangles "leaking" sometimes?
+
