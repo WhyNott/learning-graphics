@@ -5,3 +5,4 @@ pub mod primitives;
 pub mod font;
 pub mod render_2d;
 pub mod render_3d;
+pub mod model_loading;

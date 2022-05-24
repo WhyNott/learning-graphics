@@ -88,3 +88,28 @@ Huh, actually it probably is! Every once in a while, it just messes up.
 
 * Why are the triangles "leaking" sometimes?
 
+* What do I need in order to be able to load the cube model?
+
+First of all, I am only going to support triangles. 
+
+** What kinds of fields does the cube use?
+
+-v (3)
+-vt (2)
+-vn (3)
+-o (discard)
+-usemtl (discard)
+-s (??)
+-f 3 by 3 
+
+** What is my model representation?
+
+Vertices, and then the triangles are the indices into the vertices. The UV coordinates are then an array of vec3 coordinates in the same order as the corresponding verticies. 
+
+** Should I just change my model representation to something more like the data?
+
+It doesn't seem like it would be much of a problem.
+
+* Why doesn't the cube render right?
+** Why doesnt the texture look right?
+The UV coordinates are definitely correct.

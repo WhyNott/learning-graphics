@@ -12,7 +12,9 @@ use gfx::font::{Font};
 use gfx::load_tga::{load_bitmap_from_tga};
 use gfx::render_2d::{Polygon2D, TexturedFlat2D, Surface2D, TexturedPolygon2D, Viewport};
 
-use gfx::render_3d::{Model, Instance, MaterialData};
+use gfx::render_3d::{Model, Instance, MaterialData, PolygonData};
+
+use gfx::model_loading::load_obj_file;
 
 use gfx::primitives::putpixel;
 
@@ -27,6 +29,7 @@ const VIEWPORT_HEIGHT: f64 = 6.0;
 
 const BACKGROUND_COLOR: Color = from_u8_rgb(255, 255, 255);
 
+use std::fs;
 
 fn main() {
     
@@ -40,10 +43,11 @@ fn main() {
         num_lines: 16
     };
     
-    let texture = load_bitmap_from_tga("glass.tga").unwrap();
+    let texture = load_bitmap_from_tga("cube_uv.tga").unwrap();
     //let mut glass_flat = TexturedFlat2D::new(&texture, [
     //    (WINDOW_WIDTH/2) as f64*-1.0, (WINDOW_HEIGHT/2) as f64*-1.0, 1.0]);
 
+    
     
     
     let crosshair = load_bitmap_from_tga("crosshair.tga").unwrap();
@@ -65,7 +69,7 @@ fn main() {
         (poly2, from_u8_rgb(255, 0, 0))
     ];
 
-    let cube_model = Model {
+    let cube_model_old = Model {
         vertices: vec![
             [1.0, 1.0, 1.0, 1.0],
             [-1.0, 1.0, 1.0, 1.0],
@@ -76,21 +80,37 @@ fn main() {
             [-1.0, -1.0, -1.0, 1.0],
             [1.0, -1.0, -1.0, 1.0]
         ],
+        vertex_normals: vec![],
+        uv_map: 
+            vec![
+                [0.0, 1.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 1.0, 0.0],
+            ],
         triangles: vec![
-            (0, 1, 2),
-            (0, 2, 3),
-            (4, 0, 3),
-            (4, 3, 7),
-            (5, 4, 7),
-            (5, 7, 6),
-            (1, 5, 6),
-            (1, 6, 2),
-            (4, 5, 1),
-            (4, 1, 0),
-            (2, 6, 7),
-            (2, 7, 3)
+    PolygonData {vertex:[0, 1, 2],normal:[0,0,0],uv_coord:[0, 1, 2]}, 
+    PolygonData {vertex:[0, 2, 3],normal:[0,0,0],uv_coord:[0, 2, 3]}, 
+    PolygonData {vertex:[4, 0, 3],normal:[0,0,0],uv_coord:[4, 0, 3]}, 
+    PolygonData {vertex:[4, 3, 7],normal:[0,0,0],uv_coord:[4, 3, 7]}, 
+    PolygonData {vertex:[5, 4, 7],normal:[0,0,0],uv_coord:[5, 4, 7]}, 
+    PolygonData {vertex:[5, 7, 6],normal:[0,0,0],uv_coord:[5, 7, 6]}, 
+    PolygonData {vertex:[1, 5, 6],normal:[0,0,0],uv_coord:[1, 5, 6]}, 
+    PolygonData {vertex:[1, 6, 2],normal:[0,0,0],uv_coord:[1, 6, 2]}, 
+    PolygonData {vertex:[4, 5, 1],normal:[0,0,0],uv_coord:[4, 5, 1]}, 
+    PolygonData {vertex:[4, 1, 0],normal:[0,0,0],uv_coord:[4, 1, 0]}, 
+    PolygonData {vertex:[2, 6, 7],normal:[0,0,0],uv_coord:[2, 6, 7]}, 
+    PolygonData {vertex:[2, 7, 3],normal:[0,0,0],uv_coord:[2, 7, 3]}, 
         ]
     };
+
+    let cube_model = load_obj_file(&fs::read_to_string("cube.obj").unwrap());
+    
+    println!("{:?}", cube_model);
     
 
     let mut viewport = Viewport::new(
@@ -129,17 +149,7 @@ fn main() {
         z: 0.0,
         material:
         MaterialData::UV(
-            &texture,
-            vec![
-                [0.0, 1.0, 0.0],
-                [1.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [1.0, 1.0, 0.0],
-            ]
+            &texture
         )
 //        MaterialData::Flat(vec![
 //            from_u8_rgb(255, 0, 0),

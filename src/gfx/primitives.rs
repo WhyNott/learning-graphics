@@ -14,13 +14,6 @@ pub fn putpixel(buffer: &mut Bitmap, x: isize, y:isize, color: Color){
     }
 }
 
-//can I use the num thing to cast arbitrary types?
-//honestly, interpolation seems like it would only really work if the internal represenation is a float
-//so lets give it a shot
-
-//...actually, maybe it would be better if instead of all this nonsense I just made it so that it requires f32 on the dependent variable and isize on the independent one
-//seems like it would make much more sense, and be safer and more predictable.
-//(and compile faster probably)
 #[derive(Debug, Clone, Copy)]
 pub struct Interpolate {
     pub a: f32,

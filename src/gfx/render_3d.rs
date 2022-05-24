@@ -13,9 +13,23 @@ use std::iter::zip;
 
 
 
+pub enum MaterialData<'texture> {
+    Flat(Vec<Color>),
+    UV(&'texture Bitmap)
+}
+#[derive(Debug)]
+pub struct PolygonData {
+    pub vertex: [usize; 3],
+    pub normal: [usize; 3],
+    pub uv_coord: [usize; 3]
+}
+
+#[derive(Debug)]
 pub struct Model {
     pub vertices: Vec<Vector4>,
-    pub triangles: Vec<(usize, usize, usize)>
+    pub uv_map: Vec<Vector3>,
+    pub vertex_normals: Vec<Vector3>,
+    pub triangles: Vec<PolygonData>
 }
 
 impl Model {
@@ -31,9 +45,9 @@ impl Model {
         for t in &self.triangles {
             draw_wireframe_triangle(
                 &mut view.screen,
-                projected[t.0],
-                projected[t.1],
-                projected[t.2],
+                projected[t.vertex[0]],
+                projected[t.vertex[1]],
+                projected[t.vertex[2]],
                 from_u8_rgb(0, 255, 0));
         }   
     }
@@ -316,12 +330,6 @@ pub fn draw_filled_polygon(view: &mut Viewport, p0: ((isize, isize), f64), p1: (
 }
 
 
-
-pub enum MaterialData<'texture> {
-    Flat(Vec<Color>),
-    UV(&'texture Bitmap, Vec<Vector3>)
-}
-
 pub struct Instance<'model, 'texture> {
     pub model: &'model Model,
     pub scale: f64,
@@ -411,21 +419,21 @@ impl<'model, 'texture> Instance<'model, 'texture>{
             );
         }
         
-        
+
         match &self.material {
-            MaterialData::UV(texture, uv_coords) => {
+            MaterialData::UV(texture) => {
                 for t in &self.model.triangles{
                     draw_textured_polygon(
                         view,
-                        projected[t.0],
-                        projected[t.1],
-                        projected[t.2],
-                        (uv_coords[t.0][0],
-                         uv_coords[t.0][1]),
-                        (uv_coords[t.1][0],
-                         uv_coords[t.1][1]),
-                        (uv_coords[t.2][0],
-                         uv_coords[t.2][1]),
+                        projected[t.vertex[0]],
+                        projected[t.vertex[1]],
+                        projected[t.vertex[2]],
+                        (self.model.uv_map[t.uv_coord[0]][0],
+                         self.model.uv_map[t.uv_coord[0]][1]),
+                        (self.model.uv_map[t.uv_coord[1]][0],
+                         self.model.uv_map[t.uv_coord[1]][1]),
+                        (self.model.uv_map[t.uv_coord[2]][0],
+                         self.model.uv_map[t.uv_coord[2]][1]),
                         texture
                     )
                 }
@@ -436,15 +444,15 @@ impl<'model, 'texture> Instance<'model, 'texture>{
                     
                     draw_filled_polygon(
                         view,
-                        projected[t.0],
-                        projected[t.1],
-                        projected[t.2],
+                        projected[t.vertex[0]],
+                        projected[t.vertex[1]],
+                        projected[t.vertex[2]],
                         *color)
                 }
             }
 
         }
     }
-    
+
 
 }
