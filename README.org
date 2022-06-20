@@ -1,0 +1,10 @@
+A learning project to implement a graphics library, starting with nothing but a minifb-provided pixel buffer and working upwards to full software-rendered 3D graphics. 
+
+Currently supports:
+- loading and displaying tga image files
+- rendering text using bitmap fonts
+- loading waveform OBJ 3D model files
+- rendering textured 3D polygons and models (rendered in software)
+- rendering graphical primitives (lines and triangles)
+
+Note: this project is built in a very ad-hoc way. It is not yet structured as a reusable crate that can be used with other projects, as it was primarly a teaching tool for myself to understand 3D computer graphics.
